@@ -75,9 +75,20 @@ class Seq2SeqTransformer(nn.Module):
 
     # --------------------------------------------------------
     def _init_weights(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+        """
+        nn.Transformer 默认使用 Xavier 初始化。
+        在此数据集下，配合我们定义的学习率调度和迭代次数，
+        改为 PyTorch 默认的 Kaiming 初始化能获得更好的效果。
+        """
+        def reset_to_default_init(module):
+            if isinstance(module, nn.Linear):
+                nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
+                if module.bias is not None:
+                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(module.weight)
+                    bound = 1 / math.sqrt(fan_in)
+                    nn.init.uniform_(module.bias, -bound, bound)
+
+        self.transformer.apply(reset_to_default_init)
 
     # --------------------------------------------------------
     @staticmethod
